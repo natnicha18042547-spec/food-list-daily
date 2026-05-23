@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบสร้างป้ายเมนูข้าวแกงอัตโนมัติ</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Sarabun', sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .workspace {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 500px;
+            gap: 20px;
+        }
+
+        /* ส่วนของฟอร์มกรอกข้อมูล */
+        .form-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .form-container h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 20px;
+            text-align: center;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .input-group input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .menu-inputs-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 5px;
+            margin-bottom: 15px;
+        }
+
+        .menu-input-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-input-item span {
+            font-weight: bold;
+            color: red;
+            width: 25px;
+        }
+
+        .menu-input-item input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-update { background-color: #a12303; color: white; margin-bottom: 10px;}
+        .btn-update:hover { background-color: #801b02; }
+        .btn-download { background-color: #27ae60; color: white; display: none; }
+        .btn-download:hover { background-color: #219653; }
+
+        /* ==================================================
+           ส่วนเทมเพลตป้ายเมนู (สัดส่วนแนวยาวตามรูปตัวอย่าง)
+           ================================================== */
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #menu-poster {
+            width: 360px;
+            min-height: 800px;
+            background-color: white;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        /* ส่วนหัวป้าย: วันที่ */
+        .header-banner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin: 20px auto 15px auto;
+            background-color: #6a0dad; /* สีม่วงตามตัวอย่าง */
+            color: white;
+            padding: 8px 25px;
+            border-radius: 50px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .date-circle {
+            background-color: transparent;
+            border-right: 1px solid rgba(255,255,255,0.4);
+            padding-right: 10px;
+            text-align: center;
+            line-height: 1.1;
+        }
+
+        .date-circle .num { font-size: 18px; font-weight: bold; }
+        .date-circle .month { font-size: 11px; }
+        .day-text { font-size: 26px; font-weight: bold; font-style: italic; }
+
+        /* ส่วนรายการอาหาร */
+        .menu-list-container {
+            padding: 10px 25px;
+            flex-grow: 1;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            font-size: 24px; /* ขนาดตัวอักษรใหญ่ชัดเจนแบบป้ายหน้าร้าน */
+            font-weight: bold;
+            color: #000;
+            line-height: 1.2;
+        }
+
+        .menu-number {
+            color: #ff0000; /* เลขข้อสีแดง */
+            min-width: 40px;
+            text-align: right;
+            margin-right: 12px;
+        }
+
+        .menu-text {
+            flex: 1;
+            word-break: break-word;
+        }
+
+        /* ส่วนท้ายป้าย: ชื่อร้าน */
+        .footer-banner {
+            background-color: #1e4636; /* สีเขียวเข้มตามตัวอย่าง */
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="workspace">
+    <div class="form-container">
+        <h2>กรอกข้อมูลเมนูอาหาร</h2>
+        
+        <div class="input-group">
+            <input type="text" id="input-date-num" placeholder="วันที่ เช่น 23" style="width: 30%;" value="23">
+            <input type="text" id="input-date-month" placeholder="เดือน เช่น พ.ค." style="width: 30%;" value="พ.ค.">
+            <input type="text" id="input-day-name" placeholder="วัน เช่น วันเสาร์" style="width: 40%;" value="วันเสาร์">
+        </div>
+
+        <div class="menu-inputs-grid" id="inputs-wrapper">
+            </div>
+
+        <div class="input-group">
+            <input type="text" id="input-shop-name" placeholder="ชื่อร้านด้านล่าง" style="width: 100%;" value="ข้าวแกงสระยายโสม">
+        </div>
+
+        <button class="btn btn-update" onclick="generatePoster()">1. อัปเดตตัวอย่างป้าย</button>
+        <button class="btn btn-download" id="btn-download" onclick="downloadPoster()">2. เซฟรูปภาพลงมือถือ/คอม</button>
+    </div>
+
+    <div class="preview-container">
+        <div id="menu-poster">
+            <div class="header-banner">
+                <div class="date-circle">
+                    <div class="num" id="poster-date-num">23</div>
+                    <div class="month" id="poster-date-month">พ.ค.</div>
+                </div>
+                <div class="day-text" id="poster-day-name">วันเสาร์</div>
+            </div>
+
+            <div class="menu-list-container" id="poster-menu-list">
+                </div>
+
+            <div class="footer-banner" id="poster-shop-name">
+                ข้าวแกงสระยายโสม
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // เมนูเริ่มต้นตอนเปิดเว็บครั้งแรก (เอามาจากรูปตัวอย่างของคุณ)
+    const defaultMenus = [
+        "ผัดกะเพราหมู", "ผัดขิงไก่", "แกงมะเขือ(ไก่)", "ผัดผักวุ้นเส้น",
+        "ต้มจืดฟัก", "ผัดเห็ด", "ผัดคะน้า", "ผัดพริกสดไก่",
+        "มะระผัดไข่", "ผัดเผ็ดผักบุ้ง", "ปลาราดพริก", ""
+    ];
+
+    // สร้างช่องกรอกข้อมูล 12 ช่องอัตโนมัติเมื่อโหลดหน้าเว็บ
+    const inputsWrapper = document.getElementById('inputs-wrapper');
+    for (let i = 1; i <= 12; i++) {
+        const div = document.createElement('div');
+        div.className = 'menu-input-item';
+        div.innerHTML = `
+            <span>${i}.</span>
+            <input type="text" id="menu-input-${i}" value="${defaultMenus[i-1] || ''}" placeholder="ระบุเมนูที่ ${i}">
+        `;
+        inputsWrapper.appendChild(div);
+    }
+
+    // ฟังก์ชันอัปเดตข้อมูลจากฟอร์มลงไปในหน้าป้ายจำลอง
+    function generatePoster() {
+        // อัปเดตวันที่และชื่อร้าน
+        document.getElementById('poster-date-num').innerText = document.getElementById('input-date-num').value;
+        document.getElementById('poster-date-month').innerText = document.getElementById('input-date-month').value;
+        document.getElementById('poster-day-name').innerText = document.getElementById('input-day-name').value;
+        document.getElementById('poster-shop-name').innerText = document.getElementById('input-shop-name').value;
+
+        // อัปเดตรายการอาหาร (วนลูป 12 ข้อ)
+        const menuListContainer = document.getElementById('poster-menu-list');
+        menuListContainer.innerHTML = ''; // เคลียร์ของเก่าก่อน
+
+        for (let i = 1; i <= 12; i++) {
+            const menuText = document.getElementById(`menu-input-${i}`).value.trim();
+            
+            // ถ้าช่องไหนว่าง จะไม่แสดงผลในรูป หรือจะปล่อยเป็นช่องว่างมีแค่ตัวเลขจุดแบบข้อ 12 ก็ได้
+            // ในที่นี้ถ้ามีข้อความ หรือ เป็นข้อ 12 (เพื่อให้เหมือนต้นฉบับ) ให้แสดงผล
+            if (menuText !== "" || i === 12) {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'menu-item';
+                itemDiv.innerHTML = `
+                    <div class="menu-number">${i}.</div>
+                    <div class="menu-text">${menuText}</div>
+                `;
+                menuListContainer.appendChild(itemDiv);
+            }
+        }
+
+        // เปิดให้กดปุ่มดาวน์โหลดได้
+        document.getElementById('btn-download').style.display = 'block';
+        
+        // เลื่อนหน้าจอลงมาให้เห็นตัวอย่างภาพป้าย
+        document.getElementById('menu-poster').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ฟังก์ชันแปลงป้าย HTML ให้กลายเป็นไฟล์ภาพ .png เพื่อเซฟลงเครื่อง
+    function downloadPoster() {
+        const poster = document.getElementById('menu-poster');
+        
+        html2canvas(poster, {
+            scale: 2, // เพิ่มความชัดของป้ายเป็น 2 เท่า ภาพตัวอักษรจะไม่แตก
+            useCORS: true
+        }).then(canvas => {
+            const link = document.createElement('a');
+            // ตั้งชื่อไฟล์ตามวันที่ที่กรอก
+            const dayName = document.getElementById('input-day-name').value;
+            link.download = `menu-${dayName || 'today'}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    }
+
+    // สั่งให้รันทำงานครั้งแรกเพื่อแสดงข้อมูลตัวอย่างทันที
+    window.onload = generatePoster;
+</script>
+
+</body>
+</html>
